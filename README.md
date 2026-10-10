@@ -26,23 +26,90 @@ No flags, no config. Run it and pick.
 Hopify is a thin front-end — it shells out to `shopify` for both the store
 listing and the actual `theme dev` session, so the CLI must be on your `PATH`.
 
+There are **no prebuilt binaries**; hopify is built from source by `go install`,
+so Go is required on the machine you install from. (A GitHub Actions release
+pipeline with downloadable artifacts would lift that constraint — not built
+yet.)
+
 ## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/martin-jose-98/hopify/main/install.sh | sh
+```
+
+That's it. The installer builds `hopify` and then **checks whether the binary
+is actually reachable**, because `go install` silently drops the binary into
+`$(go env GOPATH)/bin` whenever `GOBIN` is unset — and that directory is
+usually not on your `PATH`. If it isn't, the installer tells you so and gives
+you the exact line to fix it. To let it fix that for you:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/martin-jose-98/hopify/main/install.sh | sh -s -- --add-to-path
+```
+
+Note the `sh -s --`. When `sh` reads a script from stdin the first
+non-option argument is treated as a *filename*, not a flag — without `-s --`
+the installer would never see your arguments.
+
+Add `--version v0.2.0` to pin a specific release. The script never edits your
+shell profile unless you pass `--add-to-path`, and it won't write a duplicate
+`PATH` line if one already exists.
+
+### Manual install
+
+If you'd rather not pipe a script into a shell:
 
 ```sh
 go install github.com/martin-jose-98/hopify@latest
 ```
 
-This installs `hopify` into `GOBIN` (default `$(go env GOPATH)/bin`). Make sure
-that directory is on your `PATH`, or set your own target first:
+Same `PATH` caveat applies — see [command not found](#hopify-command-not-found)
+below.
+
+## Troubleshooting
+
+### `hopify: command not found`
+
+Almost always the `PATH` problem above: the install succeeded, but the binary
+landed somewhere your shell doesn't look. Check where it went:
 
 ```sh
-go env -w GOBIN=$HOME/.local/bin   # ~/.local/bin is on PATH on most systems
+ls -la "$(go env GOBIN 2>/dev/null || echo "$(go env GOPATH)/bin")/hopify"
 ```
 
-Then:
+If that file exists, add its directory to your `PATH`:
 
 ```sh
-hopify
+echo 'export PATH="$PATH:$HOME/go/bin"' >> ~/.bashrc   # or ~/.zshrc
+. ~/.bashrc
+```
+
+Or, more simply, send future installs to a directory that is already on `PATH`:
+
+```sh
+go env -w GOBIN=$HOME/.local/bin
+```
+
+Then verify:
+
+```sh
+command -v hopify
+```
+
+If `command -v` prints nothing **and** the `ls` above found no file, the install
+itself failed — run `go install github.com/martin-jose-98/hopify@latest` again
+and read the error.
+
+### `theme dev: command not found`
+
+That's the **Shopify CLI**, not `hopify`. See [Requirements](#requirements).
+
+### `no organizations found — run 'shopify login' first`
+
+The Shopify CLI needs authenticating:
+
+```sh
+shopify login
 ```
 
 ## Keys
