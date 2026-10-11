@@ -1,0 +1,60 @@
+# goreleaser config: https://goreleaser.com/customization/
+# Produces prebuilt binaries so installing hopify does not require Go.
+version: 2
+
+project_name: hopify
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: hopify
+    main: .
+    binary: hopify
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    # Stamp the version so `hopify --version` reports the release it came from.
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - ids:
+      - hopify
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Don't leak the releasing user's uid/gid into published archives.
+    builds_info:
+      group: root
+      owner: root
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - none*
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

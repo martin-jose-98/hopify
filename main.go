@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -175,7 +176,25 @@ func (m picker) statusLine() string {
 	return footer
 }
 
+// version is stamped at build time via -ldflags "-X main.version=...".
+var version = "dev"
+
+// wantsVersion reports whether argv asks for the version.
+func wantsVersion(args []string) bool {
+	for _, a := range args {
+		if a == "--version" || a == "-version" {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
+	if wantsVersion(os.Args[1:]) {
+		fmt.Println("hopify " + version)
+		return
+	}
+
 	for {
 		s, err := pickStore()
 		if errors.Is(err, errCancelled) {

@@ -183,3 +183,31 @@ func TestStatusLineSwapsForPrompt(t *testing.T) {
 		t.Fatal("confirming status line should be the quit prompt")
 	}
 }
+
+func TestWantsVersion(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{"none", nil, false},
+		{"long", []string{"--version"}, true},
+		{"single dash long", []string{"-version"}, true},
+		{"after junk", []string{"--other", "--version"}, true},
+		{"embedded is not a flag", []string{"theme--version"}, false},
+		{"looks like a store arg", []string{"my-store"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := wantsVersion(tt.args); got != tt.want {
+				t.Errorf("wantsVersion(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVersionDefaultsToDev(t *testing.T) {
+	if version != "dev" {
+		t.Errorf("unstamped builds should report %q, got %q", "dev", version)
+	}
+}

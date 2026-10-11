@@ -1,7 +1,8 @@
 # Built binary
 /hopify
 
+# GoReleaser output
+/dist/
+
 # Local tool state (sqlite db + logs)
 .crush/
-
-backend

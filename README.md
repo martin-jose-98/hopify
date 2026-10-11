@@ -17,7 +17,6 @@ No flags, no config. Run it and pick.
 
 ## Requirements
 
-- **Go 1.27+** to build or install
 - **[Shopify CLI](https://shopify.dev/docs/apps/cli)** installed and logged in:
   ```sh
   shopify login
@@ -26,10 +25,8 @@ No flags, no config. Run it and pick.
 Hopify is a thin front-end — it shells out to `shopify` for both the store
 listing and the actual `theme dev` session, so the CLI must be on your `PATH`.
 
-There are **no prebuilt binaries**; hopify is built from source by `go install`,
-so Go is required on the machine you install from. (A GitHub Actions release
-pipeline with downloadable artifacts would lift that constraint — not built
-yet.)
+**Go is not required.** Releases ship prebuilt binaries for Linux, macOS and
+Windows on amd64 and arm64. Go is only needed to build from source.
 
 ## Install
 
@@ -37,11 +34,11 @@ yet.)
 curl -fsSL https://raw.githubusercontent.com/martin-jose-98/hopify/main/install.sh | sh
 ```
 
-That's it. The installer builds `hopify` and then **checks whether the binary
-is actually reachable**, because `go install` silently drops the binary into
-`$(go env GOPATH)/bin` whenever `GOBIN` is unset — and that directory is
-usually not on your `PATH`. If it isn't, the installer tells you so and gives
-you the exact line to fix it. To let it fix that for you:
+That downloads the matching prebuilt binary, verifies it against the
+release's SHA256 checksums, and installs it to `~/.local/bin`. If that
+directory isn't on your `PATH` you'll be told exactly what to add — a
+successful install that you still can't run is the classic `go install`
+trap. To let the installer fix your shell profile for you:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/martin-jose-98/hopify/main/install.sh | sh -s -- --add-to-path
@@ -51,20 +48,39 @@ Note the `sh -s --`. When `sh` reads a script from stdin the first
 non-option argument is treated as a *filename*, not a flag — without `-s --`
 the installer would never see your arguments.
 
-Add `--version v0.2.0` to pin a specific release. The script never edits your
-shell profile unless you pass `--add-to-path`, and it won't write a duplicate
-`PATH` line if one already exists.
+| Flag | Effect |
+|---|---|
+| `--version v0.3.0` | Pin a specific release instead of the latest |
+| `--prefix <dir>` | Install somewhere else (default `~/.local/bin`) |
+| `--add-to-path` | Append the install dir to your shell profile |
+| `--from-source` | Skip the binary and `go install` instead (needs Go) |
+| `-h`, `--help` | Show help |
 
-### Manual install
+### Without the script
 
-If you'd rather not pipe a script into a shell:
+Grab the asset directly from [releases](https://github.com/martin-jose-98/hopify/releases):
+
+```
+hopify_0.3.0_linux_amd64.tar.gz       # linux, darwin
+hopify_0.3.0_windows_amd64.zip         # windows
+```
+
+Verify it against `checksums.txt` in the same release.
+
+### Manual install from source
 
 ```sh
 go install github.com/martin-jose-98/hopify@latest
 ```
 
-Same `PATH` caveat applies — see [command not found](#hopify-command-not-found)
-below.
+Needs Go 1.27+. Same `PATH` caveat applies — see
+[command not found](#hopify-command-not-found) below.
+
+### Unsupported platforms
+
+There's no prebuilt binary for, say, `linux/riscv64` or `freebsd`. The
+installer detects that, tells you, and falls back to `go install`
+automatically.
 
 ## Troubleshooting
 
@@ -147,6 +163,26 @@ go test ./...    # tests
 go vet ./...     # vet
 go run .         # run without installing
 ```
+
+### Releasing
+
+Releases are automated. Push a `v*` tag and CI cross-compiles the six-target
+matrix, verifies it, and publishes a GitHub Release with SHA256 checksums:
+
+```sh
+git tag -a v0.4.0 -m "v0.4.0 — whatever changed"
+git push origin v0.4.0
+```
+
+To rehearse without publishing, build the artifacts locally:
+
+```sh
+goreleaser release --snapshot --clean --skip=publish   # lands in dist/
+```
+
+CI runs on every push and PR: build, vet, test, gofmt check, `shellcheck`
+on `install.sh`, and the full cross-compile matrix — so platform breakage
+shows up before a tag is pushed.
 
 Built with [Bubble Tea v2](https://github.com/charmbracelet/bubbletea),
 [Bubbles v2](https://github.com/charmbracelet/bubbles) and

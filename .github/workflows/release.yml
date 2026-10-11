@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # goreleaser needs the full history to generate changelogs and
+          # resolve the tag being released.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+
+      # shellcheck is not part of the goreleaser build; fail the release if the
+      # installer script regressed.
+      - name: Lint install.sh
+        run: shellcheck -s sh install.sh

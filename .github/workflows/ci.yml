@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Check formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt -w :"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Lint install.sh
+        run: shellcheck -s sh install.sh
+
+  crosscompile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # Catches platform-specific build breakage before a tag is pushed.
+      - name: Cross-compile release matrix
+        run: |
+          set -eu
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            out="$(mktemp -d)/hopify"
+            [ "$os" = windows ] && out="${out}.exe"
+            echo "building $target"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -o "$out" .
+          done
