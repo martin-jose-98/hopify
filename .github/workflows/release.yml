@@ -27,6 +27,10 @@ jobs:
           distribution: goreleaser
           version: "~> v2"
           args: release --clean
+        # goreleaser refuses to run without an explicit token, even though the
+        # workflow permission above already grants contents:write.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # shellcheck is not part of the goreleaser build; fail the release if the
       # installer script regressed.
